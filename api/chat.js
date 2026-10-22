@@ -1,3 +1,4 @@
+// v3
 // Chat assistant for the BNW Developers DOOH plan.
 // The Anthropic key and the Supabase key stay in Vercel env vars and never reach the browser.
 // The assistant answers questions about the plan and models what-if scenarios only.
