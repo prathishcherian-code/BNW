@@ -152,6 +152,34 @@ input[type=search]:focus{border-color:#4a6fd0}
 #heatp .top b{color:var(--text)}
 #heatp .fine{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4}
 #heatp.min .bd{display:none}
+.sig .sr{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:9px 0;border-top:1px solid #1f2d49}
+.sig .sr:first-of-type{border-top:0}
+.sig .sr b{font-size:12.5px}
+.sig .sr p{grid-column:1/3;margin:0;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.tps{grid-column:1/3;margin-top:4px}
+.tp{display:grid;grid-template-columns:1fr auto;gap:0 8px;align-items:center;padding:4px 0;font-size:11.5px}
+.tp em{grid-column:1/3;font-style:normal;color:var(--muted);font-size:10.5px;margin-bottom:2px}
+.lv{font:600 10.5px Inter,sans-serif;padding:2px 9px;border-radius:999px;border:1px solid;white-space:nowrap;align-self:start}
+.lv.h{color:#fb923c;border-color:#fb923c;background:rgba(251,146,60,.1)}
+.lv.m{color:#facc15;border-color:#facc15;background:rgba(250,204,21,.08)}
+.lv.l{color:#7aa2f7;border-color:#3b5aa3;background:rgba(59,90,163,.12)}
+.lv.n{color:var(--muted);border-color:#33415f}
+.sig .sub{font-size:11.5px;color:var(--muted);margin:2px 0 4px}
+#heatp .sub{font-size:11px;color:var(--muted);margin:2px 0 0;line-height:1.4}
+#heatp .evr{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid #243049}
+#heatp .evr b{font-size:12px}
+#heatp .evr button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:3px 10px;font:500 11px Inter,sans-serif;cursor:pointer}
+#heatp .evr button.on{background:#2563eb;border-color:#2563eb;color:#fff}
+#evlg{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:10.5px;color:var(--muted)}
+#evlg span{display:inline-flex;align-items:center;gap:5px}
+#evlg i,.evd{display:inline-block;width:10px;height:10px;transform:rotate(45deg);border:1.5px solid #fff;border-radius:2px}
+.evpin{width:18px;height:18px;transform:rotate(45deg);border:2px solid #fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.55)}
+.evpop{font:13px/1.45 Inter,sans-serif;color:#0f172a;min-width:210px}
+.evpop b{display:block;font-size:13.5px;margin:2px 0 4px}
+.evpop .tg{display:inline-block;font-size:10.5px;font-weight:600;color:#fff;padding:2px 8px;border-radius:999px}
+.evpop .dt{color:#475569;font-size:12px}
+.evpop .pa{font-size:10.5px;color:#64748b;margin-top:6px}
+.evpop a.evb{display:inline-block;margin-top:8px;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px}
 .sig{border:1px solid #2c3d5e;border-radius:12px;background:#0f1a2e;padding:14px;margin:0 0 16px}
 .sig h3{margin:0 0 4px;font-size:13px}
 .sig .sv{display:flex;gap:18px;margin:8px 0}
@@ -231,13 +259,17 @@ input[type=search]:focus{border-color:#4a6fd0}
   <main id="mapwrap">
     <div id="map"></div>
     <div id="msg">Loading plan...</div>
-    <section id="heatp" aria-label="Demand heatmap" style="display:none">
-      <div class="hh"><b>Demand heatmap, next 90 days</b><span><button id="heatt" class="on" type="button">On</button> <button id="heatm" type="button" aria-label="Collapse">&minus;</button></span></div>
+    <section id="heatp" aria-label="Masscom Demand Forecast" style="display:none">
+      <div class="hh"><b>Masscom Demand Forecast</b><span><button id="heatt" class="on" type="button">On</button> <button id="heatm" type="button" aria-label="Collapse">&minus;</button></span></div>
       <div class="bd">
+        <div class="sub">Where and when interest in Dubai property is likely to build, next 90 days.</div>
         <div class="hw" id="hw"></div>
         <input type="range" id="hs" min="0" max="12" value="12" aria-label="Week">
         <div class="lg"></div><div class="ll"><span>Lower</span><span>Higher</span></div>
         <div class="top" id="htop"></div>
+        <div class="evr"><b>Competitor events</b><button id="evt" class="on" type="button">On</button></div>
+        <div id="evlg"></div>
+        <div class="fine" id="evfine"></div>
         <div class="fine" id="hfine"></div>
       </div>
     </section>
@@ -596,34 +628,91 @@ input[type=search]:focus{border-color:#4a6fd0}
     rank.sort(function(a,b){return b[1]-a[1];});
     $('htop').innerHTML='Highest cities: '+rank.slice(0,3).map(function(r){return '<b>'+esc(mname(r[0]).split(':')[0])+'</b> '+Math.round(r[1]);}).join(', ');
   }
+  function lvl(t){var c=t==='High'?'h':t==='Medium'?'m':t==='Low'?'l':'n'; return '<span class="lv '+c+'">'+t+'</span>';}
+  function hrl(h){return ((h%12)||12)+(h<12?'am':'pm');}
+  function ctry(k){var m=mname(k); return m.indexOf('London')===0?'the UK':m.indexOf('Dubai')===0?'the UAE':'the US';}
+  var EVC={'Experience centre':'#a855f7','Investor event':'#ec4899','Pop-up boutique':'#14b8a6','Broker event':'#f59e0b','Industry exhibition':'#22c55e'};
+  var EVS=[], evLayer=null, evOn=true;
+  function fmtD(d){return d?new Date(d+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'}):'';}
+  function evDates(e){ if(!e.end_date) return 'Open now, from '+fmtD(e.start_date); if(e.end_date===e.start_date) return fmtD(e.start_date); return fmtD(e.start_date)+' to '+fmtD(e.end_date); }
+  function evFor(k){var m=mname(k).toLowerCase(); return EVS.filter(function(e){return m.indexOf(String(e.city).toLowerCase())===0;});}
+  var TOPN={'Dubai':'Dubai (general)','luxury watches':'Luxury watches','luxury cars':'Luxury cars','international investment':'International investment'};
+  function gcode(k){var c=ctry(k); return c==='the UK'?'GB':c==='the UAE'?'AE':'US';}
+  function topicRows(k){
+    var t=SIG&&SIG.topics&&SIG.topics[gcode(k)]; if(!t) return '';
+    var o=['Dubai','luxury watches','luxury cars','international investment'].filter(function(n){return t[n];}).map(function(n){
+      var a=t[n],pk=a[0]; a.forEach(function(x){if(x.p>pk.p) pk=x;});
+      var l=pk.i>=.45?'High':pk.i>=.2?'Medium':'Low';
+      return '<div class="tp"><span>'+TOPN[n]+'</span><span>'+lvl(l)+'</span><em>'+(pk.p>=0?'+':'')+Math.round(pk.p)+'% in the week of '+wlabel(pk.w)+'</em></div>';
+    });
+    return '<div class="tps"><div class="sub">Wider wealth and lifestyle searches in '+ctry(k)+', peak lift vs the usual autumn level</div>'+o.join('')+'</div>';
+  }
   function sigCard(s){
     var k=s.category+'|'+s.market, a=SIG&&SIG.markets[k]; if(!a||!a.length) return '';
-    var avg=0,pk=a[0]; a.forEach(function(x){avg+=x.s; if(x.s>pk.s) pk=x;}); avg=avg/a.length;
-    var W=300,H=56,bw=W/a.length,svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Weekly demand score">';
+    var avg=0,pk=a[0],avgF=0,avgS=0,mxC=0,mxF=a[0]; a.forEach(function(x){avg+=x.s; avgF+=(x.fi||0); avgS+=(x.si||0); if(x.ci>mxC) mxC=x.ci; if(x.s>pk.s) pk=x; if((x.fp||-99)>(mxF.fp||-99)) mxF=x;});
+    avg=avg/a.length; avgF/=a.length; avgS/=a.length;
+    var W=300,H=56,bw=W/a.length,svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Weekly Masscom Demand Forecast">';
     a.forEach(function(x,j){var h=Math.max(2,x.s/100*(H-4)); svg+='<rect x="'+(j*bw+2)+'" y="'+(H-h)+'" width="'+(bw-4)+'" height="'+h+'" rx="2" fill="'+(x===pk?'#f97316':'#2563eb')+'"><title>Week of '+wlabel(x.w)+': '+x.s+'</title></rect>';});
     svg+='</svg>';
-    var dr=[];
-    if(pk.fp!=null) dr.push('Long-haul fares into this market run '+(pk.fp>=0?'+':'')+pk.fp.toFixed(1)+'% vs normal in the peak week (avg $'+num(pk.fu)+' return).');
-    if(pk.n) dr.push('Calendar: '+esc(pk.n)+'.');
-    var ev=[]; a.forEach(function(x){ if(x.n&&ev.indexOf(x.n)<0&&x!==pk) ev.push(x.n); });
-    var h='<div class="sig"><h3>Signals for the next 90 days</h3>'
-      +'<div class="sv"><div><b>'+Math.round(avg)+'</b><span>Avg score</span></div><div><b>'+wlabel(pk.w)+'</b><span>Peak week ('+pk.s+')</span></div></div>'
+    var rows='';
+    // Travel
+    var tl=avgF>=.5?'High':avgF>=.3?'Medium':'Low';
+    rows+='<div class="sr"><b>Travel demand</b>'+lvl(tl)+'<p>'+(mxF.fp!=null?'Return fares into this market peak at '+(mxF.fp>=0?'+':'')+mxF.fp.toFixed(1)+'% vs normal in the week of '+wlabel(mxF.w)+' (about $'+num(mxF.fu)+'). Higher fares mean more people are travelling.':'No fare data.')+'</p></div>';
+    // Search
+    var sl=avgS>=.45?'High':avgS>=.2?'Medium':'Low';
+    var spk=a[0]; a.forEach(function(x){if((x.sp||-99)>(spk.sp||-99)) spk=x;});
+    var sav=0; a.forEach(function(x){sav+=(x.sp||0);}); sav/=a.length;
+    rows+='<div class="sr"><b>Search interest</b>'+lvl(sl)+'<p>Google searches for Dubai property and luxury real estate in '+ctry(k)+' average '+(sav>=0?'+':'')+Math.round(sav)+'% vs the usual autumn level, rising to '+(spk.sp>=0?'+':'')+Math.round(spk.sp)+'% in the week of '+wlabel(spk.w)+'.</p>'+topicRows(k)+'</div>';
+    // Calendar
+    var cl=mxC>=.5?'High':mxC>0?'Medium':'Low'; var ev=[]; a.forEach(function(x){ String(x.n||'').split('; ').forEach(function(t){ t=t.trim(); if(t&&ev.indexOf(t)<0) ev.push(t); }); });
+    rows+='<div class="sr"><b>Calendar and events</b>'+lvl(cl)+'<p>'+(ev.length?esc(ev.slice(0,4).join('. '))+'.':'No major holidays or events in this window.')+'</p></div>';
+    // Footfall
+    var f=SIG.foot&&SIG.foot[k];
+    if(f){ var fl=f.avg_pct>=55?'High':f.avg_pct>=40?'Medium':'Low';
+      rows+='<div class="sr"><b>Footfall profile</b>'+lvl(fl)+'<p>Busiest on '+esc(f.busiest_day)+'s around '+hrl(f.busiest_hour)+', quietest on '+esc(f.quietest_day)+'s. Average hourly crowd is '+f.avg_pct+'% of the peak hour at '+esc(f.place)+'. Google popular times, a typical week and not a forecast.</p></div>';
+    } else rows+='<div class="sr"><b>Footfall profile</b>'+lvl('No data')+'<p>No reliable Google footfall profile for this location.</p></div>';
+    // Competitors
+    var ce=evFor(k), cc=ce.length>=2?'High':ce.length===1?'Medium':'Low';
+    rows+='<div class="sr"><b>Competitor activity</b>'+lvl(cc)+'<p>'+(ce.length?ce.map(function(e){return esc(e.developer)+': '+esc(e.title)+' ('+evDates(e)+')';}).join('. ')+'.':'No publicly announced developer events found here in this window.')+'</p></div>';
+    var h='<div class="sig"><h3>Masscom Demand Forecast</h3><div class="sub">Next 90 days at this location.</div>'
+      +'<div class="sv"><div><b>'+Math.round(avg)+'</b><span>Avg score of 100</span></div><div><b>'+wlabel(pk.w)+'</b><span>Peak week ('+pk.s+')</span></div></div>'
       +svg+'<div class="ax"><span>'+wlabel(a[0].w)+'</span><span>'+wlabel(a[a.length-1].w)+'</span></div>'
-      +'<ul>'+dr.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'
-      +'<div class="fine">Score 0 to 100 blends flight fare pressure with the event and holiday calendar. A guide to timing, not a forecast of impressions.</div></div>';
+      +'<div style="margin-top:8px">'+rows+'</div>'
+      +'<div class="fine">The map heat combines travel demand (40%), search interest (35%) and calendar (25%). Footfall and competitor activity are shown for context and are not in the score. A guide to timing, not a forecast of impressions.</div></div>';
     return h;
+  }
+  function drawEvents(){
+    if(!evLayer){ evLayer=L.layerGroup(); }
+    evLayer.clearLayers();
+    if(!evOn){ if(map.hasLayer(evLayer)) map.removeLayer(evLayer); return; }
+    if(!map.hasLayer(evLayer)) evLayer.addTo(map);
+    EVS.forEach(function(e){
+      var c=EVC[e.kind]||'#94a3b8';
+      var ic=L.divIcon({className:'',html:'<div class="evpin" style="background:'+c+'"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+      var m=L.marker([e.lat,e.lng],{icon:ic,zIndexOffset:1000,title:e.title});
+      var u=/^https:\/\//.test(e.source_url||'')?e.source_url:null;
+      m.bindPopup('<div class="evpop"><span class="tg" style="background:'+c+'">'+esc(e.kind)+'</span><b>'+esc(e.developer)+': '+esc(e.title)+'</b><div class="dt">'+esc(e.city)+' · '+evDates(e)+(e.precision==='city'?' · city-level pin':'')+'</div><div>'+esc(e.note||'')+'</div><div class="pa">Publicly announced. Source: '+esc(e.source_label||'')+'</div>'+(u?'<a class="evb" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">View source</a>':'')+'</div>',{maxWidth:280,autoPanPaddingTopLeft:[window.innerWidth>820?380:20,window.innerWidth>820?30:70],autoPanPaddingBottomRight:[20,20]});
+      m.bindTooltip(esc(e.developer)+' · '+esc(e.kind),{direction:'top',offset:[0,-8]});
+      evLayer.addLayer(m);
+    });
   }
   $('hs').oninput=drawHeat;
   $('heatt').onclick=function(){heatOn=!heatOn; this.classList.toggle('on',heatOn); this.textContent=heatOn?'On':'Off'; drawHeat();};
+  $('evt').onclick=function(){evOn=!evOn; this.classList.toggle('on',evOn); this.textContent=evOn?'On':'Off'; drawEvents();};
   $('heatm').onclick=function(){var p=$('heatp'); p.classList.toggle('min'); this.innerHTML=p.classList.contains('min')?'+':'&minus;';};
   var _af=applyFilter; applyFilter=function(){_af(); drawHeat();};
   fetch('/api/signals').then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); }).then(function(d){
     if(!d||!d.weeks||!d.weeks.length) return;
     SIG=d; $('hs').max=d.weeks.length; $('hs').value=d.weeks.length;
-    $('hfine').textContent='Updated '+(d.meta&&d.meta.updated||'')+'. Scores blend flight fare pressure with the event and holiday calendar. A guide to timing, not a forecast.';
+    var td=new Date().toISOString().slice(0,10);
+    EVS=(d.events||[]).filter(function(e){return e.lat!=null&&e.lng!=null&&(!e.end_date||e.end_date>=td);});
+    var kinds=[]; EVS.forEach(function(e){if(kinds.indexOf(e.kind)<0) kinds.push(e.kind);});
+    $('evlg').innerHTML=kinds.map(function(t){return '<span><i style="background:'+(EVC[t]||'#94a3b8')+'"></i>'+esc(t)+'</span>';}).join('');
+    $('evfine').textContent=EVS.length?EVS.length+' publicly announced developer events. Not a complete list.':'No publicly announced developer events found right now.';
+    $('hfine').textContent='Updated '+(d.meta&&d.meta.updated||'')+'. Blends travel demand, search interest and the event calendar. Refreshed every 3 days. A guide to timing, not a forecast.';
     $('heatp').style.display='block';
     if(window.innerWidth<=820) $('heatp').classList.add('min'), $('heatm').innerHTML='+';
-    drawHeat();
+    drawHeat(); drawEvents();
   }).catch(function(){});
 
   fetch('/api/sites').then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); }).then(function(d){
