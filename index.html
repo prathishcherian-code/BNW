@@ -259,8 +259,8 @@ input[type=search]:focus{border-color:#4a6fd0}
   <main id="mapwrap">
     <div id="map"></div>
     <div id="msg">Loading plan...</div>
-    <section id="heatp" aria-label="Masscom Demand Forecast" style="display:none">
-      <div class="hh"><b>Masscom Demand Forecast</b><span><button id="heatt" class="on" type="button">On</button> <button id="heatm" type="button" aria-label="Collapse">&minus;</button></span></div>
+    <section id="heatp" aria-label="Masscom HNWI Signals" style="display:none">
+      <div class="hh"><b>Masscom HNWI Signals</b><span><button id="heatt" class="on" type="button">On</button> <button id="heatm" type="button" aria-label="Collapse">&minus;</button></span></div>
       <div class="bd">
         <div class="sub">Where and when interest in Dubai property is likely to build, next 90 days.</div>
         <div class="hw" id="hw"></div>
@@ -637,7 +637,7 @@ input[type=search]:focus{border-color:#4a6fd0}
   function lvl(t){var c=t==='High'?'h':t==='Medium'?'m':t==='Low'?'l':'n'; return '<span class="lv '+c+'">'+t+'</span>';}
   function hrl(h){return ((h%12)||12)+(h<12?'am':'pm');}
   function ctry(k){var m=mname(k); return m.indexOf('London')===0?'the UK':m.indexOf('Dubai')===0?'the UAE':'the US';}
-  var EVC={'Experience centre':'#a855f7','Investor event':'#ec4899','Pop-up boutique':'#14b8a6','Broker event':'#f59e0b','Industry exhibition':'#22c55e'};
+  var EVC={'Experience centre':'#a855f7','Investor event':'#ec4899','Pop-up boutique':'#14b8a6','Broker event':'#f59e0b','Industry exhibition':'#22c55e','Overseas roadshow':'#38bdf8'};
   var EVS=[], evLayer=null, evOn=true;
   function fmtD(d){return d?new Date(d+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'}):'';}
   function evDates(e){ if(!e.end_date) return 'Open now, from '+fmtD(e.start_date); if(e.end_date===e.start_date) return fmtD(e.start_date); return fmtD(e.start_date)+' to '+fmtD(e.end_date); }
@@ -657,7 +657,7 @@ input[type=search]:focus{border-color:#4a6fd0}
     var k=s.category+'|'+s.market, a=SIG&&SIG.markets[k]; if(!a||!a.length) return '';
     var avg=0,pk=a[0],avgF=0,avgS=0,mxC=0,mxF=a[0]; a.forEach(function(x){avg+=x.s; avgF+=(x.fi||0); avgS+=(x.si||0); if(x.ci>mxC) mxC=x.ci; if(x.s>pk.s) pk=x; if((x.fp||-99)>(mxF.fp||-99)) mxF=x;});
     avg=avg/a.length; avgF/=a.length; avgS/=a.length;
-    var W=300,H=56,bw=W/a.length,svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Weekly Masscom Demand Forecast">';
+    var W=300,H=56,bw=W/a.length,svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Weekly Masscom HNWI Signals">';
     a.forEach(function(x,j){var h=Math.max(2,x.s/100*(H-4)); svg+='<rect x="'+(j*bw+2)+'" y="'+(H-h)+'" width="'+(bw-4)+'" height="'+h+'" rx="2" fill="'+(x===pk?'#f97316':'#2563eb')+'"><title>Week of '+wlabel(x.w)+': '+x.s+'</title></rect>';});
     svg+='</svg>';
     var rows='';
@@ -668,23 +668,23 @@ input[type=search]:focus{border-color:#4a6fd0}
     var sl=avgS>=.45?'High':avgS>=.2?'Medium':'Low';
     var spk=a[0]; a.forEach(function(x){if((x.sp||-99)>(spk.sp||-99)) spk=x;});
     var sav=0; a.forEach(function(x){sav+=(x.sp||0);}); sav/=a.length;
-    rows+='<div class="sr"><b>Search interest</b>'+lvl(sl)+'<p>Google searches for Dubai property and luxury real estate in '+ctry(k)+' average '+(sav>=0?'+':'')+Math.round(sav)+'% vs the usual autumn level, rising to '+(spk.sp>=0?'+':'')+Math.round(spk.sp)+'% in the week of '+wlabel(spk.w)+'.</p>'+topicRows(k)+'</div>';
+    rows+='<div class="sr"><b>Search Intel</b>'+lvl(sl)+'<p>Online searches for Dubai property and luxury real estate in '+ctry(k)+' average '+(sav>=0?'+':'')+Math.round(sav)+'% vs the usual autumn level, rising to '+(spk.sp>=0?'+':'')+Math.round(spk.sp)+'% in the week of '+wlabel(spk.w)+'.</p>'+topicRows(k)+'</div>';
     // Calendar
     var cl=mxC>=.5?'High':mxC>0?'Medium':'Low'; var ev=[]; a.forEach(function(x){ String(x.n||'').split('; ').forEach(function(t){ t=t.trim(); if(t&&ev.indexOf(t)<0) ev.push(t); }); });
     rows+='<div class="sr"><b>Calendar and events</b>'+lvl(cl)+'<p>'+(ev.length?esc(ev.slice(0,4).join('. '))+'.':'No major holidays or events in this window.')+'</p></div>';
     // Footfall
     var f=SIG.foot&&SIG.foot[k];
     if(f){ var fl=f.avg_pct>=55?'High':f.avg_pct>=40?'Medium':'Low';
-      rows+='<div class="sr"><b>Footfall profile</b>'+lvl(fl)+'<p>Busiest on '+esc(f.busiest_day)+'s around '+hrl(f.busiest_hour)+', quietest on '+esc(f.quietest_day)+'s. Average hourly crowd is '+f.avg_pct+'% of the peak hour at '+esc(f.place)+'. Google popular times, a typical week and not a forecast.</p></div>';
-    } else rows+='<div class="sr"><b>Footfall profile</b>'+lvl('No data')+'<p>No reliable Google footfall profile for this location.</p></div>';
+      rows+='<div class="sr"><b>Footfall profile</b>'+lvl(fl)+'<p>Busiest on '+esc(f.busiest_day)+'s around '+hrl(f.busiest_hour)+', quietest on '+esc(f.quietest_day)+'s. Average hourly crowd is '+f.avg_pct+'% of the peak hour at '+esc(f.place)+'. Based on typical weekly visit patterns, not a forecast.</p></div>';
+    } else rows+='<div class="sr"><b>Footfall profile</b>'+lvl('No data')+'<p>No reliable footfall profile for this location.</p></div>';
     // Competitors
     var ce=evFor(k), cc=ce.length>=2?'High':ce.length===1?'Medium':'Low';
     rows+='<div class="sr"><b>Competitor activity</b>'+lvl(cc)+'<p>'+(ce.length?ce.map(function(e){return esc(e.developer)+': '+esc(e.title)+' ('+evDates(e)+')';}).join('. ')+'.':'No publicly announced developer events found here in this window.')+'</p></div>';
-    var h='<div class="sig"><h3>Masscom Demand Forecast</h3><div class="sub">Next 90 days at this location.</div>'
+    var h='<div class="sig"><h3>Masscom HNWI Signals</h3><div class="sub">Next 90 days at this location.</div>'
       +'<div class="sv"><div><b>'+Math.round(avg)+'</b><span>Avg score of 100</span></div><div><b>'+wlabel(pk.w)+'</b><span>Peak week ('+pk.s+')</span></div></div>'
       +svg+'<div class="ax"><span>'+wlabel(a[0].w)+'</span><span>'+wlabel(a[a.length-1].w)+'</span></div>'
       +'<div style="margin-top:8px">'+rows+'</div>'
-      +'<div class="fine">The map heat combines travel demand (40%), search interest (35%) and calendar (25%). Footfall and competitor activity are shown for context and are not in the score. A guide to timing, not a forecast of impressions.</div></div>';
+      +'<div class="fine">The map heat combines travel demand (40%), search intel (35%) and calendar (25%). Footfall and competitor activity are shown for context and are not in the score. A guide to timing, not a forecast of impressions.</div></div>';
     return h;
   }
   function drawEvents(){
@@ -715,7 +715,7 @@ input[type=search]:focus{border-color:#4a6fd0}
     var kinds=[]; EVS.forEach(function(e){if(kinds.indexOf(e.kind)<0) kinds.push(e.kind);});
     $('evlg').innerHTML=kinds.map(function(t){return '<span><i style="background:'+(EVC[t]||'#94a3b8')+'"></i>'+esc(t)+'</span>';}).join('');
     $('evfine').textContent=EVS.length?EVS.length+' publicly announced developer events. Not a complete list.':'No publicly announced developer events found right now.';
-    $('hfine').textContent='Updated '+(d.meta&&d.meta.updated||'')+'. Blends travel demand, search interest and the event calendar. Refreshed every 3 days. A guide to timing, not a forecast.';
+    $('hfine').textContent='Updated '+(d.meta&&d.meta.updated||'')+'. Blends travel demand, search intel and the event calendar. Refreshed every 3 days. A guide to timing, not a forecast.';
     $('heatp').style.display='block';
     if(window.innerWidth<=820) $('heatp').classList.add('min'), $('heatm').innerHTML='+';
     drawHeat(); drawEvents();
