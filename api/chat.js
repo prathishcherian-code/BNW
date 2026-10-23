@@ -1,4 +1,3 @@
-// v3
 // Chat assistant for the BNW Developers DOOH plan.
 // The Anthropic key and the Supabase key stay in Vercel env vars and never reach the browser.
 // The assistant answers questions about the plan and models what-if scenarios only.
@@ -127,7 +126,60 @@ async function screenContext() {
   }
 }
 
-function systemPrompt(screens) {
+let sigCache = { at: 0, text: '' };
+async function signalContext() {
+  if (Date.now() - sigCache.at < 10 * 60 * 1000 && sigCache.text) return sigCache.text;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+  if (!url || !key) return '';
+  const h = { apikey: key, Accept: 'application/json' };
+  const get = async (q) => {
+    const r = await fetch(`${url}/rest/v1/${q}`, { headers: h });
+    return r.ok ? r.json() : [];
+  };
+  try {
+    const [wk, tp, ft, ev, meta] = await Promise.all([
+      get('bnw_signal_weekly?select=market_key,week_start,score,fare_pct,fare_usd,search_pct,cal_note&order=week_start.asc'),
+      get('bnw_search_topics?select=geo,topic,week_start,pct&order=week_start.asc'),
+      get('bnw_footfall?select=market_key,place,busiest_day,quietest_day,busiest_hour,avg_pct'),
+      get('bnw_competitor_events?select=developer,title,kind,city,country,start_date,end_date,note,precision&order=start_date.asc'),
+      get('bnw_signal_meta?select=k,v'),
+    ]);
+    if (!wk.length) return '';
+    const L = [];
+    const by = {};
+    wk.forEach((r) => (by[r.market_key] = by[r.market_key] || []).push(r));
+    L.push('MASSCOM HNWI SIGNALS (timing guide, scores 0 to 100 per week, weeks start Monday, window ' + wk[0].week_start + ' to ' + wk[wk.length - 1].week_start + '). The score blends travel demand 40% (airfares into the market vs normal), search intel 35% (online searches for Dubai property and luxury real estate, seasonal lift vs the last 4 years) and the event and holiday calendar 25%. Footfall and competitor activity are shown separately and are not in the score.');
+    L.push('Weekly scores by market (week start: score):');
+    Object.keys(by).forEach((k) => {
+      const a = by[k];
+      const pk = a.reduce((m, x) => (x.score > m.score ? x : m), a[0]);
+      const notes = [...new Set(a.map((x) => x.cal_note).filter(Boolean).flatMap((n) => n.split('; ')))].slice(0, 4).join('; ');
+      const fares = a.filter((x) => x.fare_pct != null).reduce((m, x) => (x.fare_pct > m.fare_pct ? x : m), a[0]);
+      L.push('- ' + k + ': ' + a.map((x) => x.week_start.slice(5) + ' ' + x.score).join(', ') + '. Peak week ' + pk.week_start + ' (' + pk.score + '). Highest fares vs normal: ' + (fares.fare_pct >= 0 ? '+' : '') + fares.fare_pct + '% in week ' + fares.week_start + '.' + (notes ? ' Calendar: ' + notes + '.' : ''));
+    });
+    const gname = { US: 'US', GB: 'UK', AE: 'UAE' };
+    L.push('Search Intel by country: peak seasonal lift vs the usual autumn level, with the week (online searches):');
+    const tg = {};
+    tp.forEach((r) => ((tg[r.geo] = tg[r.geo] || {})[r.topic] = tg[r.geo][r.topic] || []).push(r));
+    Object.keys(tg).forEach((g) => {
+      L.push('- ' + (gname[g] || g) + ': ' + Object.keys(tg[g]).map((t) => {
+        const pk = tg[g][t].reduce((m, x) => (Number(x.pct) > Number(m.pct) ? x : m), tg[g][t][0]);
+        return t + ' ' + (pk.pct >= 0 ? '+' : '') + Math.round(pk.pct) + '% (week ' + pk.week_start + ')';
+      }).join('; '));
+    });
+    L.push('Footfall profiles (typical week, not a forecast):');
+    ft.forEach((f) => L.push('- ' + f.market_key + ' (' + f.place + '): busiest ' + f.busiest_day + ' around ' + f.busiest_hour + ':00, quietest ' + f.quietest_day + '; average hourly crowd ' + f.avg_pct + '% of the peak hour.'));
+    L.push('Publicly announced developer events and roadshows (not a complete list):');
+    ev.forEach((e) => L.push('- ' + e.developer + ': ' + e.title + ' (' + e.kind + '), ' + e.city + ', ' + e.country + ', ' + e.start_date + (e.end_date ? ' to ' + e.end_date : ' (open ended)') + (e.precision === 'city' ? ', city-level location' : '') + '. ' + (e.note || '')));
+    sigCache = { at: Date.now(), text: L.join('\n') };
+    return sigCache.text;
+  } catch (e) {
+    return '';
+  }
+}
+
+function systemPrompt(screens, signals) {
   const mk = KEYS.map(
     (k) =>
       `- ${k}: budget $${PLAN[k].budget}, forecast impressions ${PLAN[k].imp}, average CPM $${PLAN[k].cpm}, ${PLAN[k].screens} screens, ${PLAN[k].venues} venue types${PLAN[k].areas ? ', areas: ' + PLAN[k].areas : ''}. Why it matters: ${NOTES[k] || ''}`
@@ -136,18 +188,21 @@ function systemPrompt(screens) {
 You help BNW's head of marketing understand the recommended plan: where the screens are, the budget per market, CPMs, forecast impressions, and why each location suits reaching high-net-worth buyers of Dubai property.
 
 Rules:
-- Answer only from the plan data below. If something is not in the data (for example delivery limits, creative specs, taxes, other markets), say you do not have it and that Masscom Global will confirm.
+- Answer only from the plan data and the Masscom HNWI Signals data below. If something is not in the data (for example delivery limits, creative specs, taxes, other markets), say you do not have it and that Masscom Global will confirm.
 - CPM means cost per 1,000 impressions, in USD. Forecast impressions are projections for the flight, not guarantees. Audience figures are weekly averages per screen and are not de-duplicated.
 - The original plan is: flight ${FLIGHT.start} to ${FLIGHT.end} (7 days), $50,000 per market across ${KEYS.length} markets, $850,000 in total.
 - You can model what-if scenarios with the update_scenario tool: changing a market's budget, moving budget between markets, scaling the total, or changing the flight dates. Always use the tool for any scenario change and report numbers from its result. Never do the arithmetic yourself.
 - Scenarios are illustrative only. They do not change the proposed plan. Say so briefly when you show one. Impressions in a scenario assume the same CPM as the plan and available inventory; Masscom Global confirms availability and final pricing. Changing dates changes daily spend, not the impressions bought for a given budget.
+- You can advise on timing: the best weeks to advertise, how markets compare week by week, travel demand, Search Intel (online searches for Dubai property, luxury watches, luxury cars and international investment), footfall at airports and city locations, and publicly announced competitor developer events. Use the Masscom HNWI Signals data below. Present travel, search, calendar, footfall and competitor activity as separate signals in plain language, and give the 0 to 100 score as the combined timing guide. Say these are a guide to timing and not a forecast of impressions or results. Competitor events are publicly announced items only and the list is not complete. Never name the search engines, social networks, event sites or data providers behind the signals; say online searches, public listings or published reports instead. If asked how a signal is sourced, say it comes from Masscom's own market intelligence.
 - Never mention supplier costs, margins, publishers, SSPs or how CPMs were derived. Do not discuss anything unrelated to this plan.
 - Be concise and plain. Use short paragraphs or simple lists. No em dashes. Use $ and thousands separators. Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 MARKETS (use these exact keys in tool calls):
 ${mk}
 
-${screens}`;
+${screens}
+
+${signals || ''}`;
 }
 
 const TOOL = {
@@ -234,8 +289,8 @@ module.exports = async (req, res) => {
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
 
   let scenario = cleanScenario(body.scenario);
-  const screens = await screenContext();
-  const system = [{ type: 'text', text: systemPrompt(screens), cache_control: { type: 'ephemeral' } }];
+  const [screens, signals] = await Promise.all([screenContext(), signalContext()]);
+  const system = [{ type: 'text', text: systemPrompt(screens, signals), cache_control: { type: 'ephemeral' } }];
   const convo = msgs.slice();
 
   try {
