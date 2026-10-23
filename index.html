@@ -372,6 +372,11 @@ input[type=search]:focus{border-color:#4a6fd0}
     return true;
   }
 
+  function fitAll(){
+    var l=sites.filter(visible); if(!l.length) return;
+    map.flyToBounds(L.latLngBounds(l.map(function(s){return [s.lat,s.lng];})).pad(.15),{maxZoom:4,duration:1});
+  }
+
   function applyFilter(){
     cluster.clearLayers();
     var list=sites.filter(visible);
@@ -383,8 +388,8 @@ input[type=search]:focus{border-color:#4a6fd0}
     var o={};
     list.forEach(function(s){
       var k=s.category+'|'+s.market;
-      if(!o[k]) o[k]={category:s.category,market:s.market,sites:0,screens:0,pts:[]};
-      o[k].sites++; o[k].screens+=s.screen_count; o[k].pts.push([s.lat,s.lng]);
+      if(!o[k]) o[k]={category:s.category,market:s.market,sites:0,screens:0,pts:[],ids:[]};
+      o[k].sites++; o[k].screens+=s.screen_count; o[k].pts.push([s.lat,s.lng]); o[k].ids.push(s.site_id);
     });
     return Object.keys(o).map(function(k){return o[k];});
   }
@@ -407,6 +412,7 @@ input[type=search]:focus{border-color:#4a6fd0}
         if(m){
           if(window.innerWidth<=820) setSide(false);
           map.flyToBounds(L.latLngBounds(m.pts).pad(.35),{maxZoom:15,duration:1});
+          if(m.ids.length===1) setTimeout(function(){openSite(m.ids[0],false);},1100);
         }
       };
     });
@@ -503,7 +509,7 @@ input[type=search]:focus{border-color:#4a6fd0}
   $('chips').querySelectorAll('.chip').forEach(function(c){
     c.onclick=function(){
       $('chips').querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
-      c.classList.add('on'); filter=c.getAttribute('data-f'); applyFilter();
+      c.classList.add('on'); filter=c.getAttribute('data-f'); query=''; $('q').value=''; applyFilter(); $('drawer').classList.remove('open'); fitAll();
     };
   });
   $('q').oninput=function(){query=this.value.trim().toLowerCase(); applyFilter();};
