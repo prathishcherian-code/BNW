@@ -137,6 +137,30 @@ input[type=search]:focus{border-color:#4a6fd0}
 #msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:700;background:rgba(10,15,26,.85);font-size:14px;color:var(--muted);text-align:center;padding:24px}
 #msg.on{display:flex}
 #toggle{display:none}
+
+#heatp{position:absolute;top:12px;left:56px;z-index:640;width:300px;max-width:calc(100% - 70px);background:rgba(17,24,39,.94);border:1px solid #2c3d5e;border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#heatp .hh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#heatp .hh b{font-size:12.5px}
+#heatp .hh button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:3px 10px;font:500 11px Inter,sans-serif;cursor:pointer}
+#heatp .hh button.on{background:#2563eb;border-color:#2563eb;color:#fff}
+#heatp .hw{font-size:11.5px;color:var(--muted);margin:6px 0 4px}
+#heatp .hw b{color:var(--text)}
+#hs{width:100%;margin:2px 0 4px;accent-color:#f97316}
+#heatp .lg{height:6px;border-radius:3px;background:linear-gradient(90deg,#1e3a8a,#06b6d4,#facc15,#f97316,#dc2626);margin-top:4px}
+#heatp .ll{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
+#heatp .top{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+#heatp .top b{color:var(--text)}
+#heatp .fine{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+#heatp.min .bd{display:none}
+.sig{border:1px solid #2c3d5e;border-radius:12px;background:#0f1a2e;padding:14px;margin:0 0 16px}
+.sig h3{margin:0 0 4px;font-size:13px}
+.sig .sv{display:flex;gap:18px;margin:8px 0}
+.sig .sv b{display:block;font-size:20px}
+.sig .sv span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sig svg{display:block;width:100%;height:56px}
+.sig .ax{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:2px}
+.sig ul{margin:8px 0 0;padding-left:16px;font-size:12px;line-height:1.5;color:var(--text)}
+.sig .fine{font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.4}
 #mtoggle{display:none}
 @media(max-width:820px){
   html,body{overflow:hidden}
@@ -163,6 +187,8 @@ input[type=search]:focus{border-color:#4a6fd0}
   #mapwrap{flex:1 1 0;min-height:0;min-width:0}
   #chat{left:8px;right:8px;max-width:none;width:auto;height:78%;bottom:8px;z-index:700}
   #chatbtn{left:12px;bottom:26px;padding:10px 15px;font-size:13px}
+  #heatp{left:52px;right:8px;width:auto;max-width:none;top:8px;padding:8px 10px}
+  #heatp .fine{display:none}
   #drawer{top:auto;width:100%;height:72%;border-left:0;border-top:1px solid var(--line);transform:translateY(102%)}
   #drawer.open{transform:none}
   .leaflet-control-attribution{font-size:9px}
@@ -205,6 +231,16 @@ input[type=search]:focus{border-color:#4a6fd0}
   <main id="mapwrap">
     <div id="map"></div>
     <div id="msg">Loading plan...</div>
+    <section id="heatp" aria-label="Demand heatmap" style="display:none">
+      <div class="hh"><b>Demand heatmap, next 90 days</b><span><button id="heatt" class="on" type="button">On</button> <button id="heatm" type="button" aria-label="Collapse">&minus;</button></span></div>
+      <div class="bd">
+        <div class="hw" id="hw"></div>
+        <input type="range" id="hs" min="0" max="12" value="12" aria-label="Week">
+        <div class="lg"></div><div class="ll"><span>Lower</span><span>Higher</span></div>
+        <div class="top" id="htop"></div>
+        <div class="fine" id="hfine"></div>
+      </div>
+    </section>
     <button id="chatbtn" aria-label="Ask about the plan">Ask about the plan</button>
     <section id="chat" aria-label="Plan assistant">
       <div class="ch"><b>Plan assistant</b><span>Ask about locations, budgets and CPMs, or try a what-if. Scenarios do not change the proposed plan.</span><button id="chatx" aria-label="Close">&times;</button></div>
@@ -226,6 +262,7 @@ input[type=search]:focus{border-color:#4a6fd0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script>
 (function(){
   var COL = {Airport:'#2dd4bf', City:'#fbbf24', Mix:'#a78bfa'};
@@ -395,6 +432,7 @@ input[type=search]:focus{border-color:#4a6fd0}
         +(pl.areas?' Areas: '+esc(pl.areas)+'.':'')+'</p>'
         +'<p>CPM at this location: <span class="cpmtag">'+here+'</span> per 1,000 impressions.</p></div>';
     }
+    if(typeof sigCard==='function') h+=sigCard(s);
     h+='<div class="sec">Site imagery</div>';
     if(imgs.length){
       h+='<div class="gal">'+imgs.slice(0,8).map(function(u){
@@ -529,6 +567,64 @@ input[type=search]:focus{border-color:#4a6fd0}
   $('chatbtn').onclick=function(){ $('chat').classList.add('open'); $('chatbtn').style.display='none'; chatStart(); setTimeout(function(){$('cin').focus();},50); };
   $('chatx').onclick=function(){ $('chat').classList.remove('open'); $('chatbtn').style.display='flex'; };
   $('cform').onsubmit=function(e){ e.preventDefault(); sendChat($('cin').value); };
+
+
+  // ---- Demand heatmap and signals (next 90 days) ----
+  var SIG=null, heat=null, heatOn=true;
+  function mname(k){return k.split('|')[1];}
+  function wlabel(w){var d=new Date(w+'T00:00:00Z'); return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});}
+  function mscore(k,i){ var a=SIG.markets[k]; if(!a) return null; if(i>=12){var t=0; a.forEach(function(x){t+=x.s;}); return t/a.length;} return a[i]?a[i].s:null; }
+  function heatPts(i){
+    var pts=[]; sites.filter(visible).forEach(function(s){
+      var v=mscore(s.category+'|'+s.market,i); if(v==null) return;
+      pts.push([s.lat,s.lng,Math.max(.04,v/80)]);
+    }); return pts;
+  }
+  function drawHeat(){
+    if(!SIG||!window.L||!L.heatLayer) return;
+    var i=+$('hs').value, n=SIG.weeks.length;
+    var all=(i>=12);
+    $('hw').innerHTML=all?'<b>All 90 days</b> (average of 12 weeks, '+wlabel(SIG.weeks[0])+' to '+wlabel(SIG.weeks[n-1])+')':'Week of <b>'+wlabel(SIG.weeks[i])+'</b>';
+    if(!heat){
+      heat=L.heatLayer([],{radius:46,blur:34,maxZoom:6,max:1,minOpacity:.28,gradient:{.2:'#1e3a8a',.4:'#06b6d4',.6:'#facc15',.8:'#f97316',1:'#dc2626'}});
+      heat.addTo(map);
+      var c=heat._canvas; if(c){ c.style.pointerEvents='none'; var op=map.getPanes().overlayPane; op.insertBefore(c,op.firstChild); }
+    }
+    heat.setLatLngs(heatOn?heatPts(i):[]);
+    var seen={}, rank=[];
+    Object.keys(SIG.markets).forEach(function(k){ if(k.indexOf('City|')!==0) return; var v=mscore(k,i); if(v!=null) rank.push([k,v]); });
+    rank.sort(function(a,b){return b[1]-a[1];});
+    $('htop').innerHTML='Highest cities: '+rank.slice(0,3).map(function(r){return '<b>'+esc(mname(r[0]).split(':')[0])+'</b> '+Math.round(r[1]);}).join(', ');
+  }
+  function sigCard(s){
+    var k=s.category+'|'+s.market, a=SIG&&SIG.markets[k]; if(!a||!a.length) return '';
+    var avg=0,pk=a[0]; a.forEach(function(x){avg+=x.s; if(x.s>pk.s) pk=x;}); avg=avg/a.length;
+    var W=300,H=56,bw=W/a.length,svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Weekly demand score">';
+    a.forEach(function(x,j){var h=Math.max(2,x.s/100*(H-4)); svg+='<rect x="'+(j*bw+2)+'" y="'+(H-h)+'" width="'+(bw-4)+'" height="'+h+'" rx="2" fill="'+(x===pk?'#f97316':'#2563eb')+'"><title>Week of '+wlabel(x.w)+': '+x.s+'</title></rect>';});
+    svg+='</svg>';
+    var dr=[];
+    if(pk.fp!=null) dr.push('Long-haul fares into this market run '+(pk.fp>=0?'+':'')+pk.fp.toFixed(1)+'% vs normal in the peak week (avg $'+num(pk.fu)+' return).');
+    if(pk.n) dr.push('Calendar: '+esc(pk.n)+'.');
+    var ev=[]; a.forEach(function(x){ if(x.n&&ev.indexOf(x.n)<0&&x!==pk) ev.push(x.n); });
+    var h='<div class="sig"><h3>Signals for the next 90 days</h3>'
+      +'<div class="sv"><div><b>'+Math.round(avg)+'</b><span>Avg score</span></div><div><b>'+wlabel(pk.w)+'</b><span>Peak week ('+pk.s+')</span></div></div>'
+      +svg+'<div class="ax"><span>'+wlabel(a[0].w)+'</span><span>'+wlabel(a[a.length-1].w)+'</span></div>'
+      +'<ul>'+dr.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'
+      +'<div class="fine">Score 0 to 100 blends flight fare pressure with the event and holiday calendar. A guide to timing, not a forecast of impressions.</div></div>';
+    return h;
+  }
+  $('hs').oninput=drawHeat;
+  $('heatt').onclick=function(){heatOn=!heatOn; this.classList.toggle('on',heatOn); this.textContent=heatOn?'On':'Off'; drawHeat();};
+  $('heatm').onclick=function(){var p=$('heatp'); p.classList.toggle('min'); this.innerHTML=p.classList.contains('min')?'+':'&minus;';};
+  var _af=applyFilter; applyFilter=function(){_af(); drawHeat();};
+  fetch('/api/signals').then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); }).then(function(d){
+    if(!d||!d.weeks||!d.weeks.length) return;
+    SIG=d; $('hs').max=d.weeks.length; $('hs').value=d.weeks.length;
+    $('hfine').textContent='Updated '+(d.meta&&d.meta.updated||'')+'. Scores blend flight fare pressure with the event and holiday calendar. A guide to timing, not a forecast.';
+    $('heatp').style.display='block';
+    if(window.innerWidth<=820) $('heatp').classList.add('min'), $('heatm').innerHTML='+';
+    drawHeat();
+  }).catch(function(){});
 
   fetch('/api/sites').then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); }).then(function(d){
     sites=d.filter(function(s){return s&&s.lat!=null&&s.lng!=null;});
