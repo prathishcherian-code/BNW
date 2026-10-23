@@ -275,7 +275,7 @@ input[type=search]:focus{border-color:#4a6fd0}
     </section>
     <button id="chatbtn" aria-label="Ask about the plan">Ask about the plan</button>
     <section id="chat" aria-label="Plan assistant">
-      <div class="ch"><b>Plan assistant</b><span>Ask about locations, budgets and CPMs, or try a what-if. Scenarios do not change the proposed plan.</span><button id="chatx" aria-label="Close">&times;</button></div>
+      <div class="ch"><b>Plan assistant</b><span>Ask about locations, budgets, CPMs, best timing, search intel and competitor events, or try a what-if. Scenarios do not change the proposed plan.</span><button id="chatx" aria-label="Close">&times;</button></div>
       <div id="cmsgs"></div>
       <form id="cform"><input id="cin" type="text" maxlength="600" placeholder="Ask a question or try a what-if" autocomplete="off"><button id="csend" type="submit">Send</button></form>
     </section>
@@ -577,9 +577,9 @@ input[type=search]:focus{border-color:#4a6fd0}
   }
   function chatStart(){
     if($('cmsgs').children.length) return;
-    addMsg('a','<p>Hello. I can answer questions about this plan and show what-if scenarios, such as moving budget between markets or changing the flight dates. Scenarios never change the proposed plan.</p>');
+    addMsg('a','<p>Hello. I can answer questions about this plan, advise on the best timing using our HNWI signals (travel, search intel, footfall and competitor events), and show what-if scenarios, such as moving budget between markets or changing the flight dates. Scenarios never change the proposed plan.</p>');
     var sg=document.createElement('div'); sg.className='sug';
-    ['Which markets have the lowest CPM?','Why is Dubai airport in the plan?','What if we move $20,000 from Chicago city to Dubai airport?','What if the flight runs Dec 1 to Dec 14?'].forEach(function(q){
+    ['What are the best weeks to advertise in November to January?','Which developer events are coming up in London?','What if we move $20,000 from Chicago city to Dubai airport?','Which markets have the lowest CPM?'].forEach(function(q){
       var b=document.createElement('button'); b.type='button'; b.textContent=q; b.onclick=function(){ sg.remove(); sendChat(q); }; sg.appendChild(b);
     });
     $('cmsgs').appendChild(sg);
